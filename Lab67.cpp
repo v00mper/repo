@@ -175,48 +175,128 @@ struct FoldConstants : Transformer {
     }
 };
 
+class PointDecart {
+public:
+    virtual ~PointDecart() {}
+    virtual double getX() const = 0;
+    virtual double getY() const = 0;
+    virtual void setX(double x) = 0;
+    virtual void setY(double y) = 0;
+    virtual void print() const = 0;
+};
+
+class PointPolar {
+public:
+    double r_;      // радиус
+    double theta_;  // угол 
+
+    PointPolar(double r = 0.0, double theta = 0.0) : r_(r), theta_(theta) {}
+
+    double getR() const { return r_; }
+    double getTheta() const { return theta_; }
+    void setR(double r) { r_ = r; }
+    void setTheta(double theta) { theta_ = theta; }
+
+    void print() const {
+        cout << "Полярные координаты: r = " << r_ << ", theta = " << theta_ << " рад" << endl;
+    }
+};
+
+class PointPolarToDecartAdapter : public PointDecart, private PointPolar {
+public:
+
+    PointPolarToDecartAdapter(double r = 0.0, double theta = 0.0) : PointPolar(r, theta) {}
+
+    PointPolarToDecartAdapter(const PointPolar& polar) : PointPolar(polar) {}
+
+    double getX() const override {
+        return getR() * cos(getTheta());
+    }
+
+    double getY() const override {
+        return getR() * sin(getTheta());
+    }
+
+    void setX(double x) override {
+        double y = getY();
+        double r = sqrt(x * x + y * y);
+        double theta = atan2(y, x);
+        const_cast<PointPolarToDecartAdapter*>(this)->setR(r);
+        const_cast<PointPolarToDecartAdapter*>(this)->setTheta(theta);
+    }
+
+    void setY(double y) override {
+        double x = getX();
+        double r = sqrt(x * x + y * y);
+        double theta = atan2(y, x);
+        const_cast<PointPolarToDecartAdapter*>(this)->setR(r);
+        const_cast<PointPolarToDecartAdapter*>(this)->setTheta(theta);
+    }
+
+    void print() const override {
+        cout << "Декартовы координаты: x = " << getX() << ", y = " << getY() << endl;
+    }
+
+    void printPolar() const {
+        PointPolar::print();
+    }
+};
+
+const double pi = 3.14;
 
 int main() {
     setlocale(LC_ALL, "Russian");
     cout << "Задание 1:\n";
-    {
-        Number* n32 = new Number(32.0);
-        Number* n16 = new Number(16.0);
-        BinaryOperation* minus = new BinaryOperation(n32, BinaryOperation::MINUS, n16);
-        FunctionCall* callSqrt = new FunctionCall("sqrt", minus);
-        Variable* var = new Variable("var");
-        BinaryOperation* mult = new BinaryOperation(var, BinaryOperation::MUL, callSqrt);
-        FunctionCall* callAbs = new FunctionCall("abs", mult);
+    Number* n32 = new Number(32.0);
+    Number* n16 = new Number(16.0);
+    BinaryOperation* minus = new BinaryOperation(n32, BinaryOperation::MINUS, n16);
+    FunctionCall* callSqrt = new FunctionCall("sqrt", minus);
+    Variable* var = new Variable("var");
+    BinaryOperation* mult = new BinaryOperation(var, BinaryOperation::MUL, callSqrt);
+    FunctionCall* original = new FunctionCall("abs", mult);
 
-        CopySyntaxTree cst;
-        Expression* newExpr = callAbs->transform(&cst);
+    CopySyntaxTree cst;
+    Expression* copy = original->transform(&cst);
 
-        cout << "Оригинал: " << callAbs->evaluate() << endl;
-        cout << "Копия: " << newExpr->evaluate() << endl;
-
-        delete newExpr;
-        delete callAbs;
-    }
+    cout << "Оригинал: " << original->evaluate() << endl;
+    cout << "Копия: " << copy->evaluate() << endl;
 
     cout << "\nЗадание 2:\n";
-    {
-        Number* n32 = new Number(32.0);
-        Number* n16 = new Number(16.0);
-        BinaryOperation* minus = new BinaryOperation(n32, BinaryOperation::MINUS, n16);
-        FunctionCall* callSqrt = new FunctionCall("sqrt", minus);
-        Variable* var = new Variable("var");
-        BinaryOperation* mult = new BinaryOperation(var, BinaryOperation::MUL, callSqrt);
-        FunctionCall* callAbs = new FunctionCall("abs", mult);
+    FoldConstants fc;
+    Expression* folded = original->transform(&fc);
 
-        FoldConstants fc;
-        Expression* folded = callAbs->transform(&fc);
+    cout << "до: " << original->evaluate() << endl;
+    cout << "после:   " << folded->evaluate() << endl;
 
-        cout << "Оригинал: " << callAbs->evaluate() << endl;
-        cout << "Свернутое выражение:   " << folded->evaluate() << endl;
+    cout << "\nЗадание 3:\n";
+    PointPolarToDecartAdapter p1(5.0, pi / 3);  // r=5, угол=60
+    cout << "Адаптер создан с полярными координатами (r=5, theta=60):" << endl;
+    p1.printPolar();
+    p1.print();
+    cout << endl;
 
-        delete folded;
-        delete callAbs;
-    }
+    cout << "Используем адаптер как PointDecart:" << endl;
+    PointDecart* ptr = &p1;
+    cout << "x = " << ptr->getX() << ", y = " << ptr->getY() << endl;
+    ptr->print();
+    cout << endl;
+
+    cout << "Меняем x на 3.0, y на 4.0 (декартовы координаты):" << endl;
+    ptr->setX(3.0);
+    ptr->setY(4.0);
+    ptr->print();
+    p1.printPolar();
+    cout << endl;
+
+    cout << "Создаем адаптер PointPolar (r=10, theta=90):" << endl;
+    PointPolar polar(10.0, pi / 2);
+    PointPolarToDecartAdapter p2(polar);
+    p2.print();
+    p2.printPolar();
+
+    delete original;
+    delete copy;
+    delete folded;
 
     return 0;
 }
