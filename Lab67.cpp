@@ -4,6 +4,8 @@
 #include <cassert>
 #include <cmath>
 
+using namespace std;
+
 struct Transformer;
 struct Number;
 struct BinaryOperation;
@@ -79,7 +81,7 @@ private:
 };
 
 struct FunctionCall : Expression {
-    FunctionCall(std::string const& name, Expression const* arg)
+    FunctionCall(string const& name, Expression const* arg)
         : name_(name), arg_(arg) {
         assert(arg_);
         assert(name_ == "sqrt" || name_ == "abs");
@@ -87,28 +89,28 @@ struct FunctionCall : Expression {
     ~FunctionCall() { delete arg_; }
     double evaluate() const override {
         double a = arg_->evaluate();
-        if (name_ == "sqrt") return std::sqrt(a);
-        else return std::fabs(a);
+        if (name_ == "sqrt") return sqrt(a);
+        else return fabs(a);
     }
     Expression* transform(Transformer* tr) const override {
         return tr->transformFunctionCall(this);
     }
-    std::string const& name() const { return name_; }
+    string const& name() const { return name_; }
     Expression const* arg() const { return arg_; }
 private:
-    std::string const name_;
+    string const name_;
     Expression const* arg_;
 };
 
 struct Variable : Expression {
-    Variable(std::string const& name) : name_(name) {}
-    std::string const& name() const { return name_; }
+    Variable(string const& name) : name_(name) {}
+    string const& name() const { return name_; }
     double evaluate() const override { return 0.0; }
     Expression* transform(Transformer* tr) const override {
         return tr->transformVariable(this);
     }
 private:
-    std::string const name_;
+    string const name_;
 };
 
 struct CopySyntaxTree : Transformer {
@@ -159,8 +161,8 @@ struct FoldConstants : Transformer {
         Number* argNum = dynamic_cast<Number*>(arg);
         if (argNum) {
             double val;
-            if (fcall->name() == "sqrt") val = std::sqrt(argNum->value());
-            else val = std::fabs(argNum->value());
+            if (fcall->name() == "sqrt") val = sqrt(argNum->value());
+            else val = fabs(argNum->value());
             delete arg;
             return new Number(val);
         }
@@ -176,7 +178,7 @@ struct FoldConstants : Transformer {
 
 int main() {
     setlocale(LC_ALL, "Russian");
-    std::cout << "Задание 1:\n";
+    cout << "Задание 1:\n";
     {
         Number* n32 = new Number(32.0);
         Number* n16 = new Number(16.0);
@@ -189,14 +191,14 @@ int main() {
         CopySyntaxTree cst;
         Expression* newExpr = callAbs->transform(&cst);
 
-        std::cout << "Оригинал: " << callAbs->evaluate() << std::endl;
-        std::cout << "Копия: " << newExpr->evaluate() << std::endl;
+        cout << "Оригинал: " << callAbs->evaluate() << endl;
+        cout << "Копия: " << newExpr->evaluate() << endl;
 
         delete newExpr;
         delete callAbs;
     }
 
-    std::cout << "\nЗадание 2:\n";
+    cout << "\nЗадание 2:\n";
     {
         Number* n32 = new Number(32.0);
         Number* n16 = new Number(16.0);
@@ -209,8 +211,8 @@ int main() {
         FoldConstants fc;
         Expression* folded = callAbs->transform(&fc);
 
-        std::cout << "Оригинал: " << callAbs->evaluate() << std::endl;
-        std::cout << "Свернутое выражение:   " << folded->evaluate() << std::endl;
+        cout << "Оригинал: " << callAbs->evaluate() << endl;
+        cout << "Свернутое выражение:   " << folded->evaluate() << endl;
 
         delete folded;
         delete callAbs;
